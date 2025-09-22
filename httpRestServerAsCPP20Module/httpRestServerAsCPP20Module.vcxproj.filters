@@ -24,7 +24,7 @@
     <ClCompile Include="http.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="httpRestServerAsCPP20Module-Main.cpp">
+    <ClCompile Include="httpRestServer-main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="json.ixx">
