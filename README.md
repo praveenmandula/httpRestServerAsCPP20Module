@@ -1,6 +1,6 @@
 # httpRestServerAsCPP20Module
 
-A simple HTTP REST server implemented as a C++20 module.
+A simple HTTP REST server implemented as a C++20 module without using any thirdparty libraries
 
 ## Build and Run
 
