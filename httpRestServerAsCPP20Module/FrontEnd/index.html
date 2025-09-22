@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>C++ REST Server UI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background: #f4f6f9;
+            color: #333;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #007bff;
+        }
+
+        form {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+        }
+
+            button:hover {
+                background: #0056b3;
+            }
+
+        .refresh-button {
+            background: #17a2b8;
+        }
+
+            .refresh-button:hover {
+                background: #117a8b;
+            }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            background: white;
+            margin-top: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background: #007bff;
+            color: white;
+        }
+
+        .actions button {
+            margin-right: 5px;
+            background: #28a745;
+        }
+
+            .actions button.delete {
+                background: #dc3545;
+            }
+
+            .actions button:hover {
+                opacity: 0.9;
+            }
+    </style>
+</head>
+<body>
+    <h1>User Management</h1>
+
+    <!-- Create User Form -->
+    <form id="userForm">
+        <input type="hidden" id="userId">
+        <input type="text" id="name" placeholder="Name" required>
+        <input type="email" id="email" placeholder="Email" required>
+        <button type="submit">Save User</button>
+        <button type="button" onclick="resetForm()">Clear</button>
+
+        <!-- Refresh Users Button Below Save and Clear -->
+        <button type="button" class="refresh-button" onclick="loadUsers()">🔄 Refresh Users</button>
+    </form>
+
+    <!-- Users Table -->
+    <table id="usersTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        const API_URL = "http://localhost:8080/api/users";
+
+        // Load all users on startup
+        window.onload = loadUsers;
+
+        async function loadUsers() {
+            try {
+                const res = await fetch(API_URL);
+                const users = await res.json();
+                const tbody = document.querySelector("#usersTable tbody");
+                tbody.innerHTML = "";
+                users.forEach(user => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                            <td>${user.id}</td>
+                            <td>${user.name}</td>
+                            <td>${user.email}</td>
+                            <td class="actions">
+                                <button onclick="editUser(${user.id}, '${user.name}', '${user.email}')">Edit</button>
+                                <button class="delete" onclick="deleteUser(${user.id})">Delete</button>
+                            </td>
+                        `;
+                    tbody.appendChild(row);
+                });
+            } catch (err) {
+                alert("Error loading users: " + err.message);
+            }
+        }
+
+        // Handle form submit (Create or Update)
+        document.getElementById("userForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const id = document.getElementById("userId").value;
+            const name = document.getElementById("name").value;
+            const email = document.getElementById("email").value;
+
+            try {
+                if (id) {
+                    // Update
+                    await fetch(`${API_URL}/${id}`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ name, email })
+                    });
+                } else {
+                    // Create
+                    await fetch(API_URL, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ name, email })
+                    });
+                }
+                resetForm();
+                loadUsers();
+            } catch (err) {
+                alert("Error saving user: " + err.message);
+            }
+        });
+
+        // Edit user
+        function editUser(id, name, email) {
+            document.getElementById("userId").value = id;
+            document.getElementById("name").value = name;
+            document.getElementById("email").value = email;
+        }
+
+        // Delete user
+        async function deleteUser(id) {
+            if (!confirm("Delete this user?")) return;
+            try {
+                await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+                loadUsers();
+            } catch (err) {
+                alert("Error deleting user: " + err.message);
+            }
+        }
+
+        // Reset form
+        function resetForm() {
+            document.getElementById("userId").value = "";
+            document.getElementById("name").value = "";
+            document.getElementById("email").value = "";
+        }
+    </script>
+</body>
+</html>
