@@ -1,4 +1,5 @@
 export module logger;
+import threadpool;   // your thread pool module
 
 import <chrono>;
 import <format>;
@@ -18,8 +19,6 @@ import <utility>;
 import <filesystem>;
 import <iomanip>;
 
-
-import threadpool;   // your thread pool module
 
 export namespace logger {
 
