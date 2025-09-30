@@ -89,17 +89,26 @@ export namespace http {
 #ifdef _WIN32
             WSADATA wsa;
             if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
+                Log(logger::level::error, "WSAStartup failed");
                 throw std::runtime_error("WSAStartup failed");
             }
 #endif
 
             listen_sock_ = ::socket(AF_INET, SOCK_STREAM, 0);
             if (listen_sock_ == INVALID_SOCKET) {
+                Log(logger::level::error, "create socket failed");
                 throw std::runtime_error("socket() failed");
             }
 
+            // multiple apps can be bind to same port, but will be in wait state untill other
+            // application releases it
+            //int opt = 1;
+            //setsockopt(listen_sock_, SOL_SOCKET, SO_REUSEADDR,
+            //    (char*)&opt, sizeof(opt));
+
+            // prevent multiple binds on same port
             int opt = 1;
-            setsockopt(listen_sock_, SOL_SOCKET, SO_REUSEADDR,
+            setsockopt(listen_sock_, SOL_SOCKET, SO_EXCLUSIVEADDRUSE,
                 (char*)&opt, sizeof(opt));
 
             sockaddr_in addr{};
@@ -109,9 +118,11 @@ export namespace http {
 
             if (::bind(listen_sock_, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) {
                 CLOSESOCK(listen_sock_);
+                Log(logger::level::error, "socket bind failed");
                 throw std::runtime_error("bind() failed");
             }
             if (::listen(listen_sock_, backlog_) == SOCKET_ERROR) {
+                Log(logger::level::error, "listen failed");
                 CLOSESOCK(listen_sock_);
                 throw std::runtime_error("listen() failed");
             }
