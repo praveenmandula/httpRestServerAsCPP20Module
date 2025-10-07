@@ -90,15 +90,13 @@
 <body>
     <h1>User Management</h1>
 
-    <!-- Create User Form -->
+    <!-- User Form -->
     <form id="userForm">
         <input type="hidden" id="userId">
         <input type="text" id="name" placeholder="Name" required>
         <input type="email" id="email" placeholder="Email" required>
         <button type="submit">Save User</button>
         <button type="button" onclick="resetForm()">Clear</button>
-
-        <!-- Refresh Users Button Below Save and Clear -->
         <button type="button" class="refresh-button" onclick="loadUsers()">🔄 Refresh Users</button>
     </form>
 
@@ -116,17 +114,20 @@
     </table>
 
     <script>
-        const API_URL = "http://localhost:8080/api/users";
+        // Dynamically construct API URL based on current page host
+        const API_URL = `${window.location.protocol}//${window.location.host}/api/users`;
 
-        // Load all users on startup
-        window.onload = loadUsers;
+        // Load users when the page loads
+        window.addEventListener("DOMContentLoaded", loadUsers);
 
+        // Fetch and render users
         async function loadUsers() {
             try {
                 const res = await fetch(API_URL);
                 const users = await res.json();
                 const tbody = document.querySelector("#usersTable tbody");
                 tbody.innerHTML = "";
+
                 users.forEach(user => {
                     const row = document.createElement("tr");
                     row.innerHTML = `
@@ -145,7 +146,7 @@
             }
         }
 
-        // Handle form submit (Create or Update)
+        // Handle form submission (create or update user)
         document.getElementById("userForm").addEventListener("submit", async (e) => {
             e.preventDefault();
             const id = document.getElementById("userId").value;
@@ -153,21 +154,14 @@
             const email = document.getElementById("email").value;
 
             try {
-                if (id) {
-                    // Update
-                    await fetch(`${API_URL}/${id}`, {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ name, email })
-                    });
-                } else {
-                    // Create
-                    await fetch(API_URL, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ name, email })
-                    });
-                }
+                const options = {
+                    method: id ? "PUT" : "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name, email })
+                };
+
+                await fetch(id ? `${API_URL}/${id}` : API_URL, options);
+
                 resetForm();
                 loadUsers();
             } catch (err) {
@@ -175,16 +169,17 @@
             }
         });
 
-        // Edit user
+        // Populate form for editing user
         function editUser(id, name, email) {
             document.getElementById("userId").value = id;
             document.getElementById("name").value = name;
             document.getElementById("email").value = email;
         }
 
-        // Delete user
+        // Delete a user
         async function deleteUser(id) {
             if (!confirm("Delete this user?")) return;
+
             try {
                 await fetch(`${API_URL}/${id}`, { method: "DELETE" });
                 loadUsers();
@@ -193,7 +188,7 @@
             }
         }
 
-        // Reset form
+        // Reset form fields
         function resetForm() {
             document.getElementById("userId").value = "";
             document.getElementById("name").value = "";
