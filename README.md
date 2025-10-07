@@ -10,8 +10,8 @@ A simple HTTP REST server implemented as a C++20 module without using any thirdp
 3. Run the generated executable from the build output folder.  
 
 ### Linux
-Ubuntu
---------
+Ubuntu  ( In Progress )
+-----------------------
 1)
 sudo apt update
 
