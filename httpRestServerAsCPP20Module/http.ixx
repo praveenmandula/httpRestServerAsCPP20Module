@@ -72,9 +72,9 @@ export namespace http {
     public:
         explicit Server(int port,
             int backlog = 64,
-            int io_in_threads = 2,
+            int io_in_threads = 4,
             int worker_threads = 8,
-            int io_out_threads = 2,
+            int io_out_threads = 4,
             size_t max_header_bytes = 32 * 1024,
             size_t max_body_bytes = 4 * 1024 * 1024)
             : port_(port), backlog_(backlog),
