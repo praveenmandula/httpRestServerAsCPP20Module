@@ -72,15 +72,15 @@ export namespace http {
     public:
         explicit Server(int port,
             int backlog = 64,
-            int max_threads = 8,
+            int io_threads = 2,
+            int worker_threads = 8,
             size_t max_header_bytes = 32 * 1024,
             size_t max_body_bytes = 4 * 1024 * 1024)
             : port_(port), backlog_(backlog),
-            max_threads_(max_threads),
             max_header_bytes_(max_header_bytes),
             max_body_bytes_(max_body_bytes),
             running_(false), listen_sock_(INVALID_SOCKET),
-            pool_(max_threads) {
+            io_pool_(io_threads), worker_pool_(worker_threads) {
         }
 
         ~Server() { stop(); }
@@ -100,16 +100,13 @@ export namespace http {
                 throw std::runtime_error("socket() failed");
             }
 
-            // multiple apps can be bind to same port, but will be in wait state untill other
-            // application releases it
-            //int opt = 1;
-            //setsockopt(listen_sock_, SOL_SOCKET, SO_REUSEADDR,
-            //    (char*)&opt, sizeof(opt));
-
-            // prevent multiple binds on same port
+#ifdef _WIN32
             int opt = 1;
-            setsockopt(listen_sock_, SOL_SOCKET, SO_EXCLUSIVEADDRUSE,
-                (char*)&opt, sizeof(opt));
+            setsockopt(listen_sock_, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (char*)&opt, sizeof(opt));
+#else
+            int opt = 1;
+            setsockopt(listen_sock_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+#endif
 
             sockaddr_in addr{};
             addr.sin_family = AF_INET;
@@ -148,7 +145,6 @@ export namespace http {
 #endif
         }
 
-        // Single route registration method
         void add_route(const std::string& path, Handler h) {
             std::lock_guard<std::mutex> lk(route_mtx_);
             routes_[path] = std::move(h);
@@ -186,46 +182,49 @@ export namespace http {
                     }
                     else {
                         socket_t s = fds[i].fd;
-                        std::string raw;
-                        if (!recv_until_crlfcrlf(s, raw, max_header_bytes_)) {
-                            CLOSESOCK(s);
-                            fds.erase(fds.begin() + i);
-                            --i;
-                            continue;
-                        }
 
-                        Request req;
-                        size_t header_end = 0;
-                        if (!parse_request_headers(raw, req, header_end)) {
-                            CLOSESOCK(s);
-                            fds.erase(fds.begin() + i);
-                            --i;
-                            continue;
-                        }
-
-                        auto it = req.headers.find("Content-Length");
-                        if (it != req.headers.end()) {
-                            size_t content_length = std::stoul(it->second);
-                            req.body = raw.substr(header_end + 4);
-
-                            while (req.body.size() < content_length) {
-                                char buf[4096];
-                                int n = ::recv(s, buf, sizeof(buf), 0);
-                                if (n <= 0) {
-                                    CLOSESOCK(s);
-                                    fds.erase(fds.begin() + i);
-                                    --i;
-                                    break;
-                                }
-                                req.body.append(buf, n);
+                        // Push read+parse into I/O pool to avoid blocking main poll loop
+                        io_pool_.Enqueue([this, s, &fds, i]() mutable {
+                            std::string raw;
+                            if (!recv_until_crlfcrlf(s, raw, max_header_bytes_)) {
+                                CLOSESOCK(s);
+                                return;
                             }
-                        }
 
-                        pool_.Enqueue([this, req = std::move(req), s]() mutable {
-                            Response res = dispatch(req);
-                            send_response(s, res);
-                            CLOSESOCK(s);
-                        });
+                            Request req;
+                            size_t header_end = 0;
+                            if (!parse_request_headers(raw, req, header_end)) {
+                                CLOSESOCK(s);
+                                return;
+                            }
+
+                            auto it = req.headers.find("Content-Length");
+                            if (it != req.headers.end()) {
+                                size_t content_length = std::stoul(it->second);
+                                req.body = raw.substr(header_end + 4);
+
+                                while (req.body.size() < content_length) {
+                                    char buf[4096];
+                                    int n = ::recv(s, buf, sizeof(buf), 0);
+                                    if (n <= 0) {
+                                        CLOSESOCK(s);
+                                        return;
+                                    }
+                                    req.body.append(buf, n);
+                                }
+                            }
+
+                            // Dispatch business logic to worker pool
+                            worker_pool_.Enqueue([this, req = std::move(req), s]() mutable {
+                                Response res = dispatch(req);
+
+                                // Send response from I/O pool to avoid blocking worker threads
+                                io_pool_.Enqueue([s, res = std::move(res)]() mutable {
+                                    send_response(s, res);
+                                    CLOSESOCK(s);
+                                    });
+                                });
+                            });
 
                         fds.erase(fds.begin() + i);
                         --i;
@@ -243,7 +242,6 @@ export namespace http {
                     h = it->second;
                 }
                 else {
-                    // Try prefix match: e.g. "/api/users/123" should match "/api/users"
                     for (auto& [route, handler] : routes_) {
                         if (req.path.rfind(route + "/", 0) == 0) {
                             h = handler;
@@ -252,26 +250,15 @@ export namespace http {
                     }
                 }
             }
+
             if (h) return h(req);
 
             Response r;
             r.status = 404;
             r.reason = "Not Found";
             r.body = "Not Found\n";
-
-            Log(logger::level::debug_, "Route not found = ", req.path);
+            Log(logger::level::debug_, "Route not found: ", req.path);
             return r;
-        }
-
-        void send_response(socket_t s, const Response& res) {
-            std::ostringstream oss;
-            std::string reason = res.reason.empty() ? detail::reason_phrase(res.status) : res.reason;
-            oss << "HTTP/1.1 " << res.status << ' ' << reason << "\r\n";
-            for (auto& [k, v] : res.headers) oss << k << ": " << v << "\r\n";
-            oss << "Content-Length: " << res.body.size() << "\r\n";
-            oss << "Connection: close\r\n\r\n";
-            oss << res.body;
-            send_all(s, oss.str());
         }
 
         static bool recv_until_crlfcrlf(socket_t s, std::string& out, size_t max_bytes) {
@@ -309,6 +296,17 @@ export namespace http {
             return true;
         }
 
+        static void send_response(socket_t s, const Response& res) {
+            std::ostringstream oss;
+            std::string reason = res.reason.empty() ? detail::reason_phrase(res.status) : res.reason;
+            oss << "HTTP/1.1 " << res.status << ' ' << reason << "\r\n";
+            for (auto& [k, v] : res.headers) oss << k << ": " << v << "\r\n";
+            oss << "Content-Length: " << res.body.size() << "\r\n";
+            oss << "Connection: close\r\n\r\n";
+            oss << res.body;
+            send_all(s, oss.str());
+        }
+
         static void send_all(socket_t s, const std::string& data) {
             const char* p = data.data();
             size_t left = data.size();
@@ -322,7 +320,6 @@ export namespace http {
 
         int port_;
         int backlog_;
-        int max_threads_;
         size_t max_header_bytes_;
         size_t max_body_bytes_;
 
@@ -333,7 +330,8 @@ export namespace http {
         std::mutex route_mtx_;
         std::unordered_map<std::string, Handler> routes_;
 
-        ThreadPool pool_;
+        ThreadPool io_pool_;
+        ThreadPool worker_pool_;
     };
 
 } // namespace http
