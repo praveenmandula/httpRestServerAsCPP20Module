@@ -16,11 +16,14 @@
     <Filter Include="Source Files\FrontEnd">
       <UniqueIdentifier>{623925d5-85b9-4f36-8414-c3f8770352f3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\DB">
+      <UniqueIdentifier>{ff87c3dc-b144-48d3-a95c-b0b6c764bc9f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\DB\Sqlite">
+      <UniqueIdentifier>{c52fb377-198f-4cf4-924f-89a5d2c3354c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="dbhelper.ixx">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="http.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -33,9 +36,6 @@
     <ClCompile Include="logger.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="odbc.ixx">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="os.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -44,6 +44,15 @@
     </ClCompile>
     <ClCompile Include="userHandler.ixx">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DB\Sqlite\sqlite.ixx">
+      <Filter>Source Files\DB\Sqlite</Filter>
+    </ClCompile>
+    <ClCompile Include="DB\Sqlite\sqlite3.c">
+      <Filter>Source Files\DB\Sqlite</Filter>
+    </ClCompile>
+    <ClCompile Include="DB\db.ixx">
+      <Filter>Source Files\DB</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -1,8 +1,6 @@
 // import our user-defined modules
 import logger;
 import http;
-import odbc;
-import dbhelper;
 import userHandler;
 import os;
 
@@ -30,7 +28,7 @@ inline std::string read_file(const std::string& relative_path) {
 
 int checkDB() {
 // Without helper
-#if 1
+#if 0
     auto db = createDatabase();
     std::string connStr = "DSN=MySqlExpress;Trusted_Connection=Yes;";
 

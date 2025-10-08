@@ -149,12 +149,13 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="dbhelper.ixx" />
+    <ClCompile Include="DB\db.ixx" />
+    <ClCompile Include="DB\Sqlite\sqlite.ixx" />
+    <ClCompile Include="DB\Sqlite\sqlite3.c" />
     <ClCompile Include="http.ixx" />
     <ClCompile Include="httpRestServer-main.cpp" />
     <ClCompile Include="json.ixx" />
     <ClCompile Include="logger.ixx" />
-    <ClCompile Include="odbc.ixx" />
     <ClCompile Include="os.ixx" />
     <ClCompile Include="threadpool.ixx" />
     <ClCompile Include="userHandler.ixx" />
