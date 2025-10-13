@@ -1,7 +1,7 @@
 export module sqlite;
-
+import db;               // import interface
 #include "sqlite3.h"
-import db;
+
 import <string>;
 import <vector>;
 import <map>;
@@ -13,7 +13,7 @@ export namespace sqlite {
     class SQLiteDB : public db::IDatabase {
     public:
         SQLiteDB() = default;
-        ~SQLiteDB() { close(); }
+        ~SQLiteDB() override { close(); }
 
         void open(const std::string& path) override {
             if (db_) close();
@@ -49,11 +49,12 @@ export namespace sqlite {
                 db::Record row;
                 int cols = sqlite3_column_count(stmt);
                 for (int i = 0; i < cols; ++i) {
-                    const char* col = reinterpret_cast<const char*>(sqlite3_column_text(stmt, i));
-                    row[sqlite3_column_name(stmt, i)] = col ? col : "";
+                    const char* val = reinterpret_cast<const char*>(sqlite3_column_text(stmt, i));
+                    row[sqlite3_column_name(stmt, i)] = val ? val : "";
                 }
                 result.push_back(std::move(row));
             }
+
             sqlite3_finalize(stmt);
             return result;
         }
@@ -61,10 +62,4 @@ export namespace sqlite {
     private:
         sqlite3* db_ = nullptr;
     };
-
-    // Factory function for DB wrapper
-    std::unique_ptr<db::IDatabase> make_sqlite() {
-        return std::make_unique<SQLiteDB>();
-    }
-
 } // namespace sqlite

@@ -150,6 +150,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="DB\db.ixx" />
+    <ClCompile Include="DB\db_factory.cpp" />
     <ClCompile Include="DB\Sqlite\sqlite.ixx" />
     <ClCompile Include="DB\Sqlite\sqlite3.c" />
     <ClCompile Include="http.ixx" />
