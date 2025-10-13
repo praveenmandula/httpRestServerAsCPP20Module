@@ -81,7 +81,7 @@ export namespace os {
 
     inline std::string read_file(const std::string& relative_path) {
         std::filesystem::path base = os::get_executable_dir();
-        std::filesystem::path full_path = base / "FrontEnd" / relative_path;
+        std::filesystem::path full_path = base / relative_path;
 
         std::ifstream file(full_path, std::ios::binary);
         if (!file) {

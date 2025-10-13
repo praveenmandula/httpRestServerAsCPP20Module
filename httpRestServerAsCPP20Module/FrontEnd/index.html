@@ -1,199 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>C++ REST Server UI</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background: #f4f6f9;
-            color: #333;
-        }
-
-        h1 {
-            margin-bottom: 20px;
-            color: #007bff;
-        }
-
-        form {
-            margin-bottom: 20px;
-            padding: 15px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        input {
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-
-        button {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            background: #007bff;
-            color: white;
-        }
-
-            button:hover {
-                background: #0056b3;
-            }
-
-        .refresh-button {
-            background: #17a2b8;
-        }
-
-            .refresh-button:hover {
-                background: #117a8b;
-            }
-
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            background: white;
-            margin-top: 10px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-        }
-
-        th, td {
-            padding: 10px;
-            border: 1px solid #ddd;
-            text-align: left;
-        }
-
-        th {
-            background: #007bff;
-            color: white;
-        }
-
-        .actions button {
-            margin-right: 5px;
-            background: #28a745;
-        }
-
-            .actions button.delete {
-                background: #dc3545;
-            }
-
-            .actions button:hover {
-                opacity: 0.9;
-            }
-    </style>
+    <meta charset="UTF-8" />
+    <title>User Management</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>User Management</h1>
+    <header>
+        <h1>User Management</h1>
+    </header>
 
-    <!-- User Form -->
-    <form id="userForm">
-        <input type="hidden" id="userId">
-        <input type="text" id="name" placeholder="Name" required>
-        <input type="email" id="email" placeholder="Email" required>
-        <button type="submit">Save User</button>
-        <button type="button" onclick="resetForm()">Clear</button>
-        <button type="button" class="refresh-button" onclick="loadUsers()">🔄 Refresh Users</button>
-    </form>
+    <main>
+        <form id="userForm">
+            <input type="hidden" id="userId" />
+            <input type="text" id="name" placeholder="Name" required />
+            <input type="email" id="email" placeholder="Email" required />
+            <button type="submit">Save</button>
+            <button type="button" onclick="resetForm()">Clear</button>
+            <button type="button" class="refresh-button" onclick="loadUsers()">🔄 Refresh</button>
+        </form>
 
-    <!-- Users Table -->
-    <table id="usersTable">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+        <div class="table-container">
+            <table id="usersTable">
+                <thead>
+                    <tr>
+                        <th style="width:5%">ID</th>
+                        <th style="width:30%">Name</th>
+                        <th style="width:40%">Email</th>
+                        <th style="width:25%">Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </main>
 
-    <script>
-        // Dynamically construct API URL based on current page host
-        const API_URL = `${window.location.protocol}//${window.location.host}/api/users`;
+    <footer id="pagination"></footer>
 
-        // Load users when the page loads
-        window.addEventListener("DOMContentLoaded", loadUsers);
-
-        // Fetch and render users
-        async function loadUsers() {
-            try {
-                const res = await fetch(API_URL);
-                const users = await res.json();
-                const tbody = document.querySelector("#usersTable tbody");
-                tbody.innerHTML = "";
-
-                users.forEach(user => {
-                    const row = document.createElement("tr");
-                    row.innerHTML = `
-                            <td>${user.id}</td>
-                            <td>${user.name}</td>
-                            <td>${user.email}</td>
-                            <td class="actions">
-                                <button onclick="editUser(${user.id}, '${user.name}', '${user.email}')">Edit</button>
-                                <button class="delete" onclick="deleteUser(${user.id})">Delete</button>
-                            </td>
-                        `;
-                    tbody.appendChild(row);
-                });
-            } catch (err) {
-                alert("Error loading users: " + err.message);
-            }
-        }
-
-        // Handle form submission (create or update user)
-        document.getElementById("userForm").addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const id = document.getElementById("userId").value;
-            const name = document.getElementById("name").value;
-            const email = document.getElementById("email").value;
-
-            try {
-                const options = {
-                    method: id ? "PUT" : "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name, email })
-                };
-
-                await fetch(id ? `${API_URL}/${id}` : API_URL, options);
-
-                resetForm();
-                loadUsers();
-            } catch (err) {
-                alert("Error saving user: " + err.message);
-            }
-        });
-
-        // Populate form for editing user
-        function editUser(id, name, email) {
-            document.getElementById("userId").value = id;
-            document.getElementById("name").value = name;
-            document.getElementById("email").value = email;
-        }
-
-        // Delete a user
-        async function deleteUser(id) {
-            if (!confirm("Delete this user?")) return;
-
-            try {
-                await fetch(`${API_URL}/${id}`, { method: "DELETE" });
-                loadUsers();
-            } catch (err) {
-                alert("Error deleting user: " + err.message);
-            }
-        }
-
-        // Reset form fields
-        function resetForm() {
-            document.getElementById("userId").value = "";
-            document.getElementById("name").value = "";
-            document.getElementById("email").value = "";
-        }
-    </script>
+    <!-- Load JavaScript at the end (best for performance) -->
+    <script src="script.js"></script>
 </body>
 </html>

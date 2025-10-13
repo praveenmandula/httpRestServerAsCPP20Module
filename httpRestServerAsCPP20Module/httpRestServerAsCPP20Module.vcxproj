@@ -163,6 +163,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="FrontEnd\index.html" />
+    <None Include="FrontEnd\script.js" />
+    <None Include="FrontEnd\style.css" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
