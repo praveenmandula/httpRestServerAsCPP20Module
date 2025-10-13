@@ -5,6 +5,7 @@ import <vector>;
 import <mutex>;
 import <algorithm>;
 import <memory>;
+import <sstream>;
 
 import http;
 import json;
@@ -38,15 +39,15 @@ private:
         return u;
     }
 
+    static int parseIntOrDefault(const std::string& s, int def) {
+        try { return std::stoi(s); }
+        catch (...) { return def; }
+    }
+
 public:
     userHandler() {
-        // Create SQLite database instance
         database = db::getDBAccessPtr(db::DbType::SQLite);
-
-        // Open the database file (or create if not exists)
         database->open("users.db");
-
-        // Ensure users table exists
         initialize();
     }
 
@@ -60,30 +61,67 @@ public:
         );
     }
 
+    // ==============================
+    // GET /api/users?page=1&limit=10
+    // ==============================
     http::Response getUsers(const http::Request& req) {
-        Log(logger::level::debug_, "getUsers got called");
+        Log(logger::level::debug_, "getUsers called");
+
         http::Response res;
         res.headers["Content-Type"] = "application/json";
 
+        // Parse query parameters
+        int page = 1;
+        int limit = 10;
+
+        if (req.query.contains("page"))
+            page = parseIntOrDefault(req.query.at("page"), 1);
+        if (req.query.contains("limit"))
+            limit = parseIntOrDefault(req.query.at("limit"), 10);
+
+        if (page < 1) page = 1;
+        if (limit < 1) limit = 10;
+
+        int offset = (page - 1) * limit;
+
         std::lock_guard<std::mutex> lock(mtx);
-        auto rows = database->query("SELECT id, name, email FROM users;");
+
+        // Fetch total count for pagination
+        auto countRows = database->query("SELECT COUNT(*) AS total FROM users;");
+        int total = std::stoi(countRows.front().at("total"));
+
+        // Fetch paginated users
+        std::ostringstream query;
+        query << "SELECT id, name, email FROM users "
+            << "ORDER BY id ASC LIMIT " << limit
+            << " OFFSET " << offset << ";";
+        auto rows = database->query(query.str());
 
         json::Json arr = json::Json::array();
-        for (const auto& row : rows) {
+        for (const auto& row : rows)
             arr.push_back(userToJson(recordToUser(row)));
-        }
 
-        res.body = json::stringify(arr);
+        json::Json response = json::Json::object();
+        response["page"] = static_cast<double>(page);
+        response["limit"] = static_cast<double>(limit);
+        response["total"] = static_cast<double>(total);
+        response["users"] = arr;
+
+        res.body = json::stringify(response);
         return res;
     }
 
+    // ==============================
+    // POST /api/users
+    // ==============================
     http::Response createUser(const http::Request& req) {
-        Log(logger::level::debug_, "createUser got called");
+        Log(logger::level::debug_, "createUser called");
+
         http::Response res;
         res.headers["Content-Type"] = "application/json";
-
         auto req_json = json::parse(req.body);
-        std::string name = req_json.get("name", std::string("NewUser"));
+
+        std::string name = req_json.get("name", std::string("New User"));
         std::string email = req_json.get("email", std::string("new@example.com"));
 
         std::lock_guard<std::mutex> lock(mtx);
@@ -91,7 +129,6 @@ public:
             "INSERT INTO users (name, email) VALUES ('" + name + "', '" + email + "');"
         );
 
-        // Fetch last inserted user
         auto rows = database->query("SELECT id, name, email FROM users ORDER BY id DESC LIMIT 1;");
         User u = recordToUser(rows.front());
 
@@ -102,8 +139,12 @@ public:
         return res;
     }
 
+    // ==============================
+    // PUT /api/users/{id}
+    // ==============================
     http::Response updateUser(const http::Request& req) {
-        Log(logger::level::debug_, "updateUser got called");
+        Log(logger::level::debug_, "updateUser called");
+
         http::Response res;
         res.headers["Content-Type"] = "application/json";
 
@@ -124,7 +165,6 @@ public:
         );
 
         auto rows = database->query("SELECT id, name, email FROM users WHERE id = " + std::to_string(id) + ";");
-
         if (rows.empty()) {
             res.body = R"({ "status":"error","message":"User not found" })";
             return res;
@@ -138,8 +178,12 @@ public:
         return res;
     }
 
+    // ==============================
+    // DELETE /api/users/{id}
+    // ==============================
     http::Response deleteUser(const http::Request& req) {
-        Log(logger::level::debug_, "deleteUser got called");
+        Log(logger::level::debug_, "deleteUser called");
+
         http::Response res;
         res.headers["Content-Type"] = "application/json";
 
@@ -149,7 +193,6 @@ public:
 
         std::lock_guard<std::mutex> lock(mtx);
         auto rows = database->query("SELECT id FROM users WHERE id = " + std::to_string(id) + ";");
-
         if (rows.empty()) {
             res.body = R"({ "status":"error","message":"User not found" })";
             return res;

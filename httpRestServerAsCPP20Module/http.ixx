@@ -42,9 +42,10 @@ export namespace http {
     struct Request {
         std::string method;
         std::string path;
-        std::string version;
-        std::unordered_map<std::string, std::string> headers;
         std::string body;
+        std::string version;
+        std::unordered_map<std::string, std::string> query;
+        std::unordered_map<std::string, std::string> headers;
     };
 
     struct Response {
@@ -254,16 +255,46 @@ export namespace http {
         static bool parse_request_headers(const std::string& raw, Request& req, size_t& header_end) {
             header_end = raw.find("\r\n\r\n");
             if (header_end == std::string::npos) return false;
+
             std::istringstream iss(raw.substr(0, header_end));
             std::string line;
             if (!std::getline(iss, line)) return false;
             if (!line.empty() && line.back() == '\r') line.pop_back();
+
             std::istringstream start(line);
             start >> req.method >> req.path >> req.version;
 
+            // --- Parse query parameters from req.path ---
+            size_t qpos = req.path.find('?');
+            if (qpos != std::string::npos) {
+                std::string query_str = req.path.substr(qpos + 1);
+                req.path = req.path.substr(0, qpos); // trim the path to remove '?...'
+
+                std::stringstream ss(query_str);
+                std::string kv;
+                while (std::getline(ss, kv, '&')) {
+                    size_t eq = kv.find('=');
+                    if (eq != std::string::npos) {
+                        std::string key = kv.substr(0, eq);
+                        std::string val = kv.substr(eq + 1);
+
+                        // Basic URL decoding for spaces (%20)
+                        for (size_t pos = val.find("%20");
+                            pos != std::string::npos;
+                            pos = val.find("%20", pos))
+                            val.replace(pos, 3, " ");
+
+                        req.query[key] = val;
+                    }
+                }
+            }
+            // --- End query parsing ---
+
+            // --- Parse HTTP headers ---
             while (std::getline(iss, line)) {
                 if (!line.empty() && line.back() == '\r') line.pop_back();
                 if (line.empty()) break;
+
                 auto pos = line.find(':');
                 if (pos != std::string::npos) {
                     std::string key = line.substr(0, pos);
@@ -272,8 +303,10 @@ export namespace http {
                     req.headers[key] = val;
                 }
             }
+
             return true;
         }
+
 
         static void send_response(socket_t s, const Response& res) {
             std::ostringstream oss;

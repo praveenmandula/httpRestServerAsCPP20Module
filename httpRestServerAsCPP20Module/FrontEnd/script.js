@@ -1,34 +1,39 @@
 const API_URL = `${window.location.protocol}//${window.location.host}/api/users`;
 
-let allUsers = [];
 let currentPage = 1;
 const PAGE_SIZE = 10;
+let totalUsers = 0;
 
 window.addEventListener("DOMContentLoaded", loadUsers);
 
 async function loadUsers() {
     try {
-        const res = await fetch(API_URL);
-        allUsers = await res.json();
-        currentPage = 1;
-        renderUsers();
+        const res = await fetch(`${API_URL}?page=${currentPage}&limit=${PAGE_SIZE}`);
+        const data = await res.json();
+
+        const users = data.users || [];
+        totalUsers = data.total || 0;
+
+        renderUsers(users);
         renderPagination();
     } catch (err) {
         alert("Error loading users: " + err.message);
     }
 }
 
-function renderUsers() {
+function renderUsers(users) {
     const tbody = document.querySelector("#usersTable tbody");
     tbody.innerHTML = "";
 
-    const start = (currentPage - 1) * PAGE_SIZE;
-    const end = start + PAGE_SIZE;
-    const usersToShow = allUsers.slice(start, end);
-
-    usersToShow.forEach(user => {
+    if (users.length === 0) {
         const row = document.createElement("tr");
+        row.innerHTML = `<td colspan="4" style="text-align:center;">No users found</td>`;
+        tbody.appendChild(row);
+        return;
+    }
 
+    users.forEach(user => {
+        const row = document.createElement("tr");
         row.innerHTML = `
             <td>${user.id}</td>
             <td>${user.name}</td>
@@ -43,23 +48,37 @@ function renderUsers() {
 }
 
 function renderPagination() {
-    const totalPages = Math.ceil(allUsers.length / PAGE_SIZE);
+    const totalPages = Math.ceil(totalUsers / PAGE_SIZE);
     const paginationDiv = document.getElementById("pagination");
 
-    paginationDiv.innerHTML = `
-        <button onclick="changePage(-1)" ${currentPage === 1 ? "disabled" : ""}>⬅ Prev</button>
-        Page ${currentPage} of ${totalPages}
-        <button onclick="changePage(1)" ${currentPage === totalPages ? "disabled" : ""}>Next ➡</button>
-    `;
+    paginationDiv.innerHTML = "";
+
+    const prevBtn = document.createElement("button");
+    prevBtn.textContent = "⬅ Prev";
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.onclick = () => changePage(-1);
+
+    const nextBtn = document.createElement("button");
+    nextBtn.textContent = "Next ➡";
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.onclick = () => changePage(1);
+
+    const info = document.createElement("span");
+    info.textContent = `Page ${currentPage} of ${totalPages} (${totalUsers} users)`;
+
+    paginationDiv.appendChild(prevBtn);
+    paginationDiv.appendChild(info);
+    paginationDiv.appendChild(nextBtn);
 }
 
 function changePage(direction) {
-    const totalPages = Math.ceil(allUsers.length / PAGE_SIZE);
+    const totalPages = Math.ceil(totalUsers / PAGE_SIZE);
     currentPage += direction;
+
     if (currentPage < 1) currentPage = 1;
     if (currentPage > totalPages) currentPage = totalPages;
-    renderUsers();
-    renderPagination();
+
+    loadUsers();
 }
 
 document.getElementById("userForm").addEventListener("submit", async (e) => {
