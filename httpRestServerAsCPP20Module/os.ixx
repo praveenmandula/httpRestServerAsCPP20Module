@@ -4,6 +4,12 @@ import <filesystem>;
 import <vector>;
 import <system_error>;
 
+// import cpp specific modules
+import <iostream>;
+import <string>;
+import <fstream>;
+import <sstream>;
+
 #if defined(_WIN32)
 #define NOMINMAX
 #include <windows.h>
@@ -17,7 +23,6 @@ import <system_error>;
 #endif
 
 export namespace os {
-
     // Returns the absolute path to the running executable.
     inline std::filesystem::path get_executable_path() {
 #if defined(_WIN32)
@@ -72,6 +77,20 @@ export namespace os {
     // Returns the directory containing the running executable.
     inline std::filesystem::path get_executable_dir() {
         return get_executable_path().parent_path();
+    }
+
+    inline std::string read_file(const std::string& relative_path) {
+        std::filesystem::path base = os::get_executable_dir();
+        std::filesystem::path full_path = base / "FrontEnd" / relative_path;
+
+        std::ifstream file(full_path, std::ios::binary);
+        if (!file) {
+            return "<h1>404 Not Found</h1><p>File: " + full_path.string() + "</p>";
+        }
+
+        std::ostringstream ss;
+        ss << file.rdbuf();
+        return ss.str();
     }
 
 } // namespace os
