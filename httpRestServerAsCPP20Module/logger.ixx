@@ -167,11 +167,3 @@ export namespace logger {
     }
 
 } // namespace logx
-
-// Usage
-//logger::get().set_level(level::info);
-//logger::get().add_sink(std::make_unique<file_sink>("httpServer.log"));
-//Log(level::info, "Hello {}, {}", "world", 42);
-//Log(level::debug_, "Debugging value = {}", 1234);
-//Log(level::warn, "Warning about {}", "something");
-//Log(level::error, "Error code {}", -99);

@@ -84,6 +84,8 @@ public:
 
         int offset = (page - 1) * limit;
 
+        Log(logger::level::debug_, std::format("Page={}, Limit={}, Offset={}", page, limit, offset));
+
         std::lock_guard<std::mutex> lock(mtx);
 
         // Fetch total count for pagination
@@ -124,6 +126,8 @@ public:
         std::string name = req_json.get("name", std::string("New User"));
         std::string email = req_json.get("email", std::string("new@example.com"));
 
+        Log(logger::level::debug_, std::format("name={}, email={}", name, email));
+
         std::lock_guard<std::mutex> lock(mtx);
         database->execute(
             "INSERT INTO users (name, email) VALUES ('" + name + "', '" + email + "');"
@@ -155,6 +159,8 @@ public:
 
         std::string name = req_json.get("name", std::string(""));
         std::string email = req_json.get("email", std::string(""));
+
+        Log(logger::level::debug_, std::format("id={}, name={}, email={}", id, name, email));
 
         std::lock_guard<std::mutex> lock(mtx);
         database->execute(
@@ -197,6 +203,8 @@ public:
             res.body = R"({ "status":"error","message":"User not found" })";
             return res;
         }
+
+        Log(logger::level::debug_, std::format("id=", id));
 
         database->execute("DELETE FROM users WHERE id = " + std::to_string(id) + ";");
 
