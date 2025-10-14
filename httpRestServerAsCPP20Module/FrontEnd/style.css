@@ -22,11 +22,11 @@ header {
     justify-content: space-between;
 }
 
-header h1 {
-    margin: 0;
-    color: #007bff;
-    font-size: 1.5rem;
-}
+    header h1 {
+        margin: 0;
+        color: #007bff;
+        font-size: 1.5rem;
+    }
 
 main {
     flex: 1;
@@ -64,17 +64,17 @@ button {
     color: white;
 }
 
-button:hover {
-    background: #0056b3;
-}
+    button:hover {
+        background: #0056b3;
+    }
 
 .refresh-button {
     background: #17a2b8;
 }
 
-.refresh-button:hover {
-    background: #117a8b;
-}
+    .refresh-button:hover {
+        background: #117a8b;
+    }
 
 .table-container {
     flex: 1;
@@ -108,13 +108,13 @@ th {
     background: #28a745;
 }
 
-.actions button.delete {
-    background: #dc3545;
-}
+    .actions button.delete {
+        background: #dc3545;
+    }
 
-.actions button:hover {
-    opacity: 0.9;
-}
+    .actions button:hover {
+        opacity: 0.9;
+    }
 
 footer {
     background: white;
@@ -127,15 +127,51 @@ footer {
     gap: 10px;
 }
 
-footer button {
-    background: #6c757d;
+    footer button {
+        background: #6c757d;
+    }
+
+        footer button:hover {
+            background: #5a6268;
+        }
+
+        footer button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+/* Toast Notification Styling */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    min-width: 200px;
+    padding: 12px 20px;
+    background-color: #333;
+    color: #fff;
+    border-radius: 8px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s, transform 0.4s;
+    transform: translateY(20px);
+    z-index: 1000;
+    font-size: 14px;
 }
 
-footer button:hover {
-    background: #5a6268;
-}
+    .toast.show {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+    }
 
-footer button:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-}
+    .toast.success {
+        background-color: #28a745;
+    }
+
+    .toast.error {
+        background-color: #dc3545;
+    }
+
+    .toast.info {
+        background-color: #17a2b8;
+    }

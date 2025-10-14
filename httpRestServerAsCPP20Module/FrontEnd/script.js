@@ -17,7 +17,7 @@ async function loadUsers() {
         renderUsers(users);
         renderPagination();
     } catch (err) {
-        alert("Error loading users: " + err.message);
+        showToast("Error loading users: " + err.message, "error");
     }
 }
 
@@ -97,8 +97,9 @@ document.getElementById("userForm").addEventListener("submit", async (e) => {
         await fetch(id ? `${API_URL}/${id}` : API_URL, options);
         resetForm();
         await loadUsers();
+        showToast(id ? "User updated successfully" : "User created successfully", "success");
     } catch (err) {
-        alert("Error saving user: " + err.message);
+        showToast("Error saving user: " + err.message, "error");
     }
 });
 
@@ -113,8 +114,9 @@ async function deleteUser(id) {
     try {
         await fetch(`${API_URL}/${id}`, { method: "DELETE" });
         await loadUsers();
+        showToast("User deleted successfully", "success");
     } catch (err) {
-        alert("Error deleting user: " + err.message);
+        showToast("Error deleting user: " + err.message, "error");
     }
 }
 
@@ -122,4 +124,15 @@ function resetForm() {
     document.getElementById("userId").value = "";
     document.getElementById("name").value = "";
     document.getElementById("email").value = "";
+}
+
+// ✅ Toast Notification
+function showToast(message, type = "info") {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.className = `toast show ${type}`;
+
+    setTimeout(() => {
+        toast.className = "toast";
+    }, 3000);
 }
